@@ -1,0 +1,1621 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>影视点播 - 优化版</title>
+  <style>
+    /* 样式代码保持不变，与之前相同 */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; }
+    .header { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; padding: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; }
+    .logo { font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+    .logo svg { width: 30px; height: 30px; }
+    .api-selector { display: flex; gap: 10px; align-items: center; }
+    .api-label { font-size: 14px; opacity: 0.9; }
+    .api-dropdown { position: relative; }
+    .api-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+    .api-btn:hover { background: rgba(255,255,255,0.25); }
+    .api-list { position: absolute; top: 100%; right: 0; background: white; color: #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 200px; z-index: 1000; display: none; overflow: hidden; }
+    .api-list.show { display: block; }
+    .api-option { padding: 10px 15px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f0f0f0; }
+    .api-option:hover { background: #f5f5f5; }
+    .api-option.active { background: #e8f3ff; color: #007bff; font-weight: 500; }
+    .search-container { padding: 15px; background: white; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .search-box { display: flex; gap: 10px; max-width: 800px; margin: 0 auto; }
+    .search-input { flex: 1; padding: 12px 18px; border: 1px solid #ddd; border-radius: 25px; font-size: 15px; outline: none; transition: all 0.3s; }
+    .search-input:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+    .search-btn { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 15px; font-weight: 500; transition: background 0.3s; }
+    .search-btn:hover { background: #0056b3; }
+    .search-history { max-width: 800px; margin: 10px auto 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; }
+    .history-title { font-size: 14px; color: #666; font-weight: 500; }
+    .clear-history { background: none; border: none; color: #999; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
+    .clear-history:hover { color: #ff4757; background: #fff5f5; }
+    .history-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .history-item { background: #f8f9fa; padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #495057; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; border: 1px solid #e9ecef; }
+    .history-item:hover { background: #e9ecef; border-color: #dee2e6; transform: translateY(-1px); }
+    .history-item .delete-btn { color: #6c757d; font-size: 16px; line-height: 1; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
+    .history-item .delete-btn:hover { color: #dc3545; background: rgba(220, 53, 69, 0.1); }
+    .no-history { text-align: center; color: #999; font-size: 13px; padding: 20px; }
+    .container { padding: 15px; max-width: 1200px; margin: 0 auto; }
+    .list { display: grid; gap: 15px; }
+    @media (min-width: 992px) { .list { grid-template-columns: repeat(6, 1fr); } .item img { height: 150px; } }
+    @media (min-width: 768px) and (max-width: 991px) { .list { grid-template-columns: repeat(4, 1fr); } .item img { height: 180px; } }
+    @media (max-width: 767px) { .list { grid-template-columns: repeat(2, 1fr); } .item img { height: 220px; } }
+    .item { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+    .item:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+    .item img { width: 100%; object-fit: cover; }
+    .item-title { padding: 10px; font-size: 14px; color: #333; line-height: 1.4; height: 60px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .loading { text-align: center; padding: 20px; color: #999; display: none; }
+    .detail-container { padding: 15px; display: none; max-width: 1200px; margin: 0 auto; }
+    .back-btn { font-size: 24px; margin-bottom: 15px; cursor: pointer; display: inline-block; padding: 5px 10px; border-radius: 5px; transition: background 0.2s; }
+    .back-btn:hover { background: #f0f0f0; }
+    .detail-title { margin: 15px 0; font-size: 20px; color: #333; text-align: left; }
+    .detail-info { font-size: 14px; color: #666; margin-bottom: 10px; }
+    .play-section { margin-top: 20px; background: #fff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .play-header { font-size: 16px; color: #333; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+    .current-playing { font-size: 14px; color: #007bff; margin-bottom: 10px; display: flex; align-items: center; }
+    .current-playing svg { margin-right: 6px; }
+    .total-episodes { font-size: 14px; color: #888; }
+    .play-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    .episode-btn { padding: 8px 0; background: #f5f5f5; color: #333; border-radius: 6px; text-decoration: none; text-align: center; font-size: 14px; transition: all 0.2s ease; border: none; cursor: pointer; position: relative; overflow: hidden; }
+    .episode-btn:hover { background: #e8f3ff; color: #007bff; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,123,255,0.1); }
+    .episode-btn.active { background: #007bff; color: white; font-weight: 500; }
+    .episode-btn.played::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #28a745; }
+    .episode-btn.disabled { opacity: 0.5; cursor: not-allowed; background: #eee; color: #999; }
+    .error-state { text-align: center; padding: 20px; color: #d9534f; background: #f9f9f9; border-radius: 6px; }
+    .error-state p { margin-bottom: 15px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-state img { width: 120px; height: 120px; margin-bottom: 20px; opacity: 0.4; }
+    .episode-jump { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
+    .episode-jump input { width: 50px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; }
+    .episode-jump button { padding: 6px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+    .episode-jump button:hover { background: #0056b3; }
+    .jump-to { font-size: 14px; color: #666; }
+    
+    #playOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 9999;
+      display: none;
+    }
+
+    #playContainer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #playIframe {
+      width: 100%;
+      height: 100%;
+      max-width: 1200px;
+      max-height: calc(1200px * 9 / 16);
+      border: none;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .play-controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .play-control-btn {
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+    }
+
+    .play-control-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+    
+    .refresh-page-btn { display: inline-block; margin-top: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+    .refresh-page-btn:hover { background: #0056b3; }
+    
+    .favorite-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+    .favorite-btn:hover {
+      background: #ff3742;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(255, 71, 87, 0.3);
+    }
+    .favorite-btn.favorited {
+      background: #2ed573;
+    }
+    .favorite-btn.favorited:hover {
+      background: #25c765;
+      box-shadow: 0 4px 8px rgba(46, 213, 115, 0.3);
+    }
+    .favorite-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .favorites-container {
+      padding: 15px;
+      display: none;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .favorites-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .favorites-title {
+      font-size: 24px;
+      color: #333;
+    }
+    .clear-favorites {
+      background: #ff4757;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .clear-favorites:hover {
+      background: #ff3742;
+    }
+    .favorites-list {
+      display: grid;
+      gap: 15px;
+    }
+    @media (min-width: 992px) { .favorites-list { grid-template-columns: repeat(6, 1fr); } }
+    @media (min-width: 768px) and (max-width: 991px) { .favorites-list { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 767px) { .favorites-list { grid-template-columns: repeat(2, 1fr); } }
+    .favorite-item {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .favorite-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .favorite-item img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+    .favorite-item-title {
+      padding: 10px;
+      font-size: 14px;
+      color: #333;
+      line-height: 1.4;
+      height: 60px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .favorite-item-actions {
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+    }
+    .favorite-item-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .favorite-api {
+      font-size: 12px;
+      color: #007bff;
+      background: #e8f3ff;
+      padding: 2px 6px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    .remove-favorite {
+      background: none;
+      border: none;
+      color: #ff4757;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    .remove-favorite:hover {
+      color: #ff3742;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+      margin-left: 20px;
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    .nav-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .empty-favorites {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .empty-favorites img {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    #playLoading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 16px;
+      z-index: 10000;
+      display: none;
+      text-align: center;
+    }
+    
+    #playError {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(220, 53, 69, 0.95);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      z-index: 10000;
+      display: none;
+      text-align: center;
+      max-width: 90%;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    
+    #playError button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: white;
+      color: #dc3545;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    #playError button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    #closePlayBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,0,0,0.8);
+      color: white;
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      z-index: 10000;
+      display: none;
+      transition: all 0.3s;
+      font-weight: bold;
+    }
+    
+    #closePlayBtn:hover {
+      background: rgba(255,0,0,1);
+      transform: scale(1.1);
+    }
+    
+    body.play-active .header,
+    body.play-active .container,
+    body.play-active .favorites-container,
+    body.play-active .detail-container {
+      display: none;
+    }
+    
+    body.play-active {
+      overflow: hidden;
+      touch-action: none;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 15px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #007bff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* 优化提示样式 */
+    .optimization-hint {
+      background: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #495057;
+    }
+    
+    .optimization-hint strong {
+      color: #007bff;
+    }
+    
+    .api-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #e8f3ff;
+      color: #007bff;
+    }
+    
+    .api-status.success::before {
+      content: "✓";
+      color: #28a745;
+    }
+    
+    .api-status.failed::before {
+      content: "✗";
+      color: #dc3545;
+    }
+  </style>
+</head>
+<body>
+  <!-- HTML结构保持不变 -->
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.5 3.5L5.5 7L5.5 17L18.5 20.5L18.5 3.5Z" stroke="white" stroke-width="1.5"/>
+          <path d="M9 12L15 12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        影视点播 - 优化版
+      </div>
+      <div class="nav-buttons">
+        <button class="nav-btn" onclick="showFavorites()">
+          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          收藏
+        </button>
+        <button class="nav-btn" onclick="showList()">
+          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0 4h2v-2H3v2zm12 0h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2v-2h-2v2zm-8 0h2v-2H7v2zm0-4h2v-2H7v2zm12 8h2v-2h-2v2zm0-12h2v-2h-2v2zm0 4h2v-2h-2v2zm0 4h2v-2h-2v2zm-4-8h2v-2h-2v2zm0 4h2v-2h-2v2zm0 4h2v-2h-2v2z"/>
+          </svg>
+          列表
+        </button>
+      </div>
+      <div class="api-selector">
+        <span class="api-label">数据源:</span>
+        <div class="api-dropdown">
+          <button class="api-btn" id="apiBtn">
+            <span id="currentApiName">智能选择</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="api-list" id="apiList">
+            <div class="api-option active" data-api="-1">智能选择</div>
+            <div class="api-option" data-api="0">非凡</div>
+            <div class="api-option" data-api="1">最大</div>
+            <div class="api-option" data-api="2">卧龙</div>
+            <div class="api-option" data-api="3">量子</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-container">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="请输入影视名称（支持智能搜索）...">
+      <button class="search-btn" onclick="searchVideos()">搜索</button>
+    </div>
+   
+
+  <div class="search-history" id="searchHistory">
+    <div class="history-header">
+      <div class="history-title">搜索历史</div>
+      <button class="clear-history" onclick="clearAllHistory()">清空</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="no-history">暂无搜索历史</div>
+    </div>
+  </div>
+
+  <div class="container" id="listContainer">
+    <div class="list" id="videoList"></div>
+    <div class="loading" id="loading">
+      <div class="loading-spinner"></div>
+      <p>智能搜索中... (并行请求多个数据源)</p>
+      <div id="apiStatus" style="margin-top: 10px;"></div>
+    </div>
+    <div class="empty-state" id="emptyState">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E" alt="搜索">
+      <p>请输入影视名称进行搜索</p>
+      <p class="hint">例如：流浪地球、甄嬛传、乡村爱情</p>
+    </div>
+  </div>
+
+  <div class="detail-container" id="detailContainer">
+    <div class="back-btn" onclick="showList()">← 返回列表</div>
+    
+    <h1 class="detail-title" id="detailTitle"></h1>
+    <div class="detail-info" id="detailTime"></div>
+    <div class="detail-info" id="detailApiInfo"></div>
+    
+    <button class="favorite-btn" id="favoriteBtn" onclick="toggleFavorite()">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path id="favoriteIcon" d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/>
+      </svg>
+      <span id="favoriteText">收藏</span>
+    </button>
+    
+    <div class="play-section" id="playSection">
+      <div class="play-header">
+        <span>选集列表</span>
+        <span class="total-episodes" id="totalEpisodes">共 0 集</span>
+      </div>
+      <div class="current-playing" id="currentPlaying" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
+        </svg>
+        <span>当前播放：第 <span id="currentEpisodeNum">1</span> 集</span>
+      </div>
+      <div id="playGridContainer"></div>
+      <div class="episode-jump">
+        <span class="jump-to">跳转到：</span>
+        <input type="number" id="jumpInput" min="1" value="1">
+        <button onclick="jumpToEpisode()">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="favorites-container" id="favoritesContainer">
+    <div class="favorites-header">
+      <h1 class="favorites-title">收藏</h1>
+      <button class="clear-favorites" onclick="clearAllFavorites()">清空收藏</button>
+    </div>
+    <div class="favorites-list" id="favoritesList"></div>
+    <div class="empty-favorites" id="emptyFavorites" style="display: none;">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E" alt="无收藏">
+      <p>暂无收藏内容</p>
+      <p class="hint">去视频列表添加一些收藏吧</p>
+    </div>
+  </div>
+
+  <!-- 播放器相关元素 -->
+  <button id="closePlayBtn" onclick="closePlayPage()">×</button>
+  <div id="playLoading">
+    <div class="loading-spinner"></div>
+    <p>视频加载中...</p>
+  </div>
+  <div id="playError">
+    <h3>播放失败</h3>
+    <p id="playErrorMessage">视频加载失败，请尝试其他集数或切换API源</p>
+    <button onclick="closePlayPage()">关闭</button>
+    <button onclick="retryCurrentEpisode()" style="margin-left: 10px; background: #ffc107; color: #333;">重试</button>
+  </div>
+  <div id="playOverlay">
+    <div id="playContainer">
+      <iframe id="playIframe" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation"></iframe>
+    </div>
+    <div class="play-controls" id="playControls">
+      <button class="play-control-btn" onclick="playPreviousEpisode()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+        </svg>
+        上一集
+      </button>
+      <button class="play-control-btn" onclick="playNextEpisode()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+        </svg>
+        下一集
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 配置与初始化 ====================
+    // API配置
+    const apiConfigs = [
+      { 
+        name: "非凡", 
+        searchUrl: "http://api.ffzyapi.com/api.php/provide/vod/?ac=videolist&wd=", 
+        detailUrl: "http://api.ffzyapi.com/api.php/provide/vod/?ac=videolist&ids=",
+        enabled: true
+      },
+      { 
+        name: "最大", 
+        searchUrl: "https://api.zuidapi.com/api.php/provide/vod/?ac=videolist&wd=", 
+        detailUrl: "https://api.zuidapi.com/api.php/provide/vod/?ac=videolist&ids=",
+        enabled: true
+      },
+      { 
+        name: "卧龙", 
+        searchUrl: "https://collect.wolongzy.cc/api.php/provide/vod/?ac=videolist&wd=", 
+        detailUrl: "https://collect.wolongzy.cc/api.php/provide/vod/?ac=videolist&ids=",
+        enabled: true
+      },
+      { 
+        name: "量子", 
+        searchUrl: "https://cj.lziapi.com/api.php/provide/vod/?ac=videolist&wd=", 
+        detailUrl: "https://cj.lziapi.com/api.php/provide/vod/?ac=videolist&ids=",
+        enabled: true
+      }
+    ];
+
+    // 全局变量
+    let currentApiIndex = -1; // -1表示智能选择模式
+    let currentPage = 1;
+    let isLoading = false;
+    let isSearching = false;
+    let currentKeyword = '';
+    let currentPlayUrl = '';
+    let currentEpisodeIndex = 0;
+    let totalEpisodes = 0;
+    let playedEpisodes = new Set();
+    let currentEpisodeUrls = [];
+    let searchHistory = [];
+    let favorites = [];
+    let currentVideoItem = null;
+    let videoLoadRetryCount = 0;
+    const MAX_RETRY_COUNT = 3;
+    
+    // 存储键
+    const STORAGE_KEY = 'video_search_history_v3';
+    const API_STORAGE_KEY = 'current_api_index_v2';
+    const FAVORITES_STORAGE_KEY = 'video_favorites_v4';
+    const SEARCH_CACHE_KEY = 'search_cache_v2';
+    
+    // 缓存系统
+    const searchCache = new Map();
+    const videoDetailCache = new Map();
+    const CACHE_TTL = 10 * 60 * 1000; // 10分钟缓存
+    
+    // 查询优化配置
+    const synonymMap = {
+      '乡村爱情': '乡村爱情故事',
+      '战狼': '战狼 电影',
+      '复仇者联盟': '复仇者联盟 电影',
+      '权力的游戏': '权力的游戏 美剧',
+      '老友记': '老友记 美剧',
+      '琅琊榜': '琅琊榜 电视剧',
+      '甄嬛传': '甄嬛传 电视剧',
+      '西游记': '西游记 电视剧'
+    };
+    
+    const stopWords = ['免费', '在线观看', '高清', '完整版', '国语版', '未删减版', '最新'];
+    
+    // ==================== 核心函数 - 搜索优化 ====================
+    
+    // 智能查询优化
+    function optimizeQuery(keyword) {
+      let optimized = keyword.trim();
+      
+      // 1. 同义词替换
+      if (synonymMap[optimized]) {
+        console.log(`查询优化: "${optimized}" -> "${synonymMap[optimized]}"`);
+        optimized = synonymMap[optimized];
+      }
+      
+      // 2. 去除停用词
+      stopWords.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        optimized = optimized.replace(regex, '').trim();
+      });
+      
+      // 3. 智能补充类型
+      const hasSeason = /第[零一二三四五六七八九十\d]+季/.test(optimized) || /第[零一二三四五六七八九十\d]+部/.test(optimized);
+      const hasEpisode = /第[零一二三四五六七八九十\d]+集/.test(optimized);
+      
+      if (hasSeason || hasEpisode) {
+        if (!optimized.includes('电视剧') && !optimized.includes('美剧') && !optimized.includes('剧集')) {
+          optimized += ' 电视剧';
+        }
+      }
+      
+      // 4. 处理特殊字符
+      optimized = optimized.replace(/\s+/g, ' ').trim();
+      
+      if (optimized !== keyword) {
+        console.log(`查询优化结果: "${keyword}" -> "${optimized}"`);
+      }
+      
+      return optimized;
+    }
+    
+    // ==================== 核心函数 - 并行请求 ====================
+    
+    // 带超时的fetch
+    function fetchWithTimeout(url, timeout = 5000) {
+      return Promise.race([
+        fetch(url),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`请求超时 (${timeout}ms)`)), timeout)
+        )
+      ]);
+    }
+    
+    // 带重试的fetch
+    async function fetchWithRetry(url, retries = 2, delay = 1000) {
+      for (let i = 0; i <= retries; i++) {
+        try {
+          const response = await fetchWithTimeout(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          if (i === retries) throw error;
+          console.warn(`请求失败，第${i+1}次重试: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    // ==================== 核心函数 - 智能搜索 ====================
+    
+    async function loadData() {
+      if (isLoading || !isSearching) return;
+      isLoading = true;
+      
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('apiStatus').innerHTML = '<div class="optimization-hint">正在并行请求多个数据源...</div>';
+      
+      const optimizedKeyword = optimizeQuery(currentKeyword);
+      const cacheKey = `${optimizedKeyword}_${currentPage}`;
+      
+      // 检查缓存
+      const cachedResult = getCachedSearchResult(cacheKey);
+      if (cachedResult && currentPage === 1) {
+        console.log('使用缓存结果:', cacheKey);
+        renderList(cachedResult.data);
+        updateApiStatus(cachedResult.apiStatus);
+        isLoading = false;
+        document.getElementById('loading').style.display = 'none';
+        return;
+      }
+      
+      try {
+        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+        const enabledApis = apiConfigs.filter(api => api.enabled);
+        
+        // 并行请求所有启用的API
+        const requests = enabledApis.map(async (api, index) => {
+          const apiUrl = `${api.searchUrl}${encodeURIComponent(optimizedKeyword)}&pg=${currentPage}`;
+          const fullUrl = proxyUrl + encodeURIComponent(apiUrl);
+          
+          try {
+            const startTime = Date.now();
+            const data = await fetchWithRetry(fullUrl);
+            const responseTime = Date.now() - startTime;
+            
+            return {
+              success: true,
+              apiIndex: index,
+              apiName: api.name,
+              data: data.list || [],
+              responseTime,
+              total: data.total || 0
+            };
+          } catch (error) {
+            return {
+              success: false,
+              apiIndex: index,
+              apiName: api.name,
+              error: error.message
+            };
+          }
+        });
+        
+        // 等待所有请求完成
+        const results = await Promise.allSettled(requests);
+        
+        // 处理结果
+        const apiStatus = [];
+        let successfulResults = [];
+        
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const value = result.value;
+            apiStatus.push({
+              name: value.apiName,
+              success: value.success,
+              responseTime: value.responseTime,
+              count: value.data.length,
+              error: value.error
+            });
+            
+            if (value.success && value.data.length > 0) {
+              successfulResults.push(value);
+            }
+          }
+        });
+        
+        // 显示API状态
+        updateApiStatus(apiStatus);
+        
+        // 处理成功结果
+        if (successfulResults.length > 0) {
+          // 选择数据最多的API结果
+          successfulResults.sort((a, b) => b.data.length - a.data.length);
+          const bestResult = successfulResults[0];
+          
+          console.log(`最佳数据源: ${bestResult.apiName}, 结果数: ${bestResult.data.length}`);
+          
+          // 渲染结果
+          renderList(bestResult.data);
+          
+          // 缓存结果
+          cacheSearchResult(cacheKey, bestResult.data, apiStatus);
+          
+          // 如果是智能模式，记住这个成功的API
+          if (currentApiIndex === -1 && bestResult.apiIndex !== undefined) {
+            document.getElementById('currentApiName').textContent = `${bestResult.apiName} (智能选择)`;
+          }
+          
+          currentPage++;
+        } else if (currentPage === 1) {
+          // 没有结果
+          document.getElementById('videoList').innerHTML = '';
+          document.getElementById('emptyState').innerHTML = `
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E<path fill='%23999' d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E" alt="无结果">
+            <p>未找到"${escapeHtml(currentKeyword)}"相关资源</p>
+            <p class="hint">已尝试所有数据源，请尝试其他关键词</p>
+            <div class="optimization-hint" style="margin-top: 15px;">
+              <strong>搜索建议：</strong><br>
+              1. 尝试更简短的关键词<br>
+              2. 检查是否有错别字<br>
+              3. 尝试英文或拼音搜索
+            </div>
+          `;
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+      } catch (error) {
+        console.error('搜索失败:', error);
+        document.getElementById('emptyState').innerHTML = `
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E<path fill='%23d9534f' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2V7h2v10z'/%3E%3C/svg%3E" alt="错误">
+          <p>${error.message}</p>
+          <p class="hint">网络异常或所有数据源暂时不可用</p>
+          <button class="refresh-page-btn" onclick="loadData()">重新搜索</button>
+        `;
+        document.getElementById('emptyState').style.display = 'block';
+      } finally {
+        isLoading = false;
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    
+    // 更新API状态显示
+    function updateApiStatus(apiStatus) {
+      const apiStatusEl = document.getElementById('apiStatus');
+      if (!apiStatusEl || !apiStatus.length) return;
+      
+      let html = '<div class="optimization-hint">';
+      apiStatus.forEach(status => {
+        const statusClass = status.success ? 'success' : 'failed';
+        const timeInfo = status.responseTime ? ` (${status.responseTime}ms)` : '';
+        const countInfo = status.count > 0 ? ` - ${status.count}个结果` : '';
+        html += `<div class="api-status ${statusClass}">${status.name}: ${status.success ? '成功' + timeInfo + countInfo : '失败'}</div>`;
+      });
+      html += '</div>';
+      apiStatusEl.innerHTML = html;
+    }
+    
+    // ==================== 缓存系统 ====================
+    
+    function cacheSearchResult(key, data, apiStatus) {
+      searchCache.set(key, {
+        data,
+        apiStatus,
+        timestamp: Date.now()
+      });
+      
+      // 保存到localStorage
+      try {
+        const cacheData = {
+          key,
+          data,
+          apiStatus,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(`${SEARCH_CACHE_KEY}_${key}`, JSON.stringify(cacheData));
+      } catch (e) {
+        console.log('缓存保存失败:', e);
+      }
+    }
+    
+    function getCachedSearchResult(key) {
+      // 先检查内存缓存
+      const cached = searchCache.get(key);
+      if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        return cached;
+      }
+      
+      // 检查localStorage
+      try {
+        const saved = localStorage.getItem(`${SEARCH_CACHE_KEY}_${key}`);
+        if (saved) {
+          const cacheData = JSON.parse(saved);
+          if (Date.now() - cacheData.timestamp < CACHE_TTL) {
+            searchCache.set(key, cacheData);
+            return cacheData;
+          }
+        }
+      } catch (e) {
+        console.log('缓存读取失败:', e);
+      }
+      
+      return null;
+    }
+    
+    // ==================== 详情页优化 ====================
+    
+    async function showDetail(id, apiIndex = null) {
+      document.getElementById('listContainer').style.display = 'none';
+      document.getElementById('detailContainer').style.display = 'block';
+      document.getElementById('detailTitle').textContent = '加载中...';
+      document.getElementById('playGridContainer').innerHTML = '<div class="loading">加载选集列表中...</div>';
+      
+      // 确定使用哪个API
+      let detailApiIndex = apiIndex !== null ? apiIndex : currentApiIndex;
+      if (detailApiIndex === -1) detailApiIndex = 0; // 智能模式下默认用第一个
+      
+      try {
+        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+        const api = apiConfigs[detailApiIndex];
+        const apiUrl = api.detailUrl + id;
+        const fullUrl = proxyUrl + encodeURIComponent(apiUrl);
+        
+        const data = await fetchWithRetry(fullUrl);
+        
+        if (data.list && data.list.length > 0) {
+          const item = data.list[0];
+          currentVideoItem = item;
+          currentVideoItem.apiIndex = detailApiIndex;
+          
+          document.getElementById('detailTitle').textContent = escapeHtml(item.vod_name);
+          document.getElementById('detailTime').textContent = `更新时间：${item.vod_time || '未知'}`;
+          document.getElementById('detailApiInfo').innerHTML = `数据源：<span class="api-status success">${api.name}</span>`;
+          
+          // 解析播放链接
+          if (item.vod_play_url) {
+            currentEpisodeUrls = parseEpisodeUrls(item.vod_play_url);
+            totalEpisodes = currentEpisodeUrls.length;
+          } else {
+            currentEpisodeUrls = [];
+            totalEpisodes = 0;
+          }
+          
+          document.getElementById('totalEpisodes').textContent = `共 ${totalEpisodes} 集`;
+          renderEpisodes();
+          updateFavoriteButton();
+          
+        } else {
+          throw new Error('未找到视频详情');
+        }
+      } catch (error) {
+        console.error('加载详情失败:', error);
+        document.getElementById('playGridContainer').innerHTML = `
+          <div class="error-state">
+            <p>加载详情失败: ${error.message}</p>
+            <p>视频ID: ${id}</p>
+            <p>数据源: ${apiConfigs[detailApiIndex].name}</p>
+            <div style="margin-top: 15px;">
+              <button class="refresh-page-btn" onclick="showDetail(${id}, ${detailApiIndex})">重试当前数据源</button>
+              <button class="refresh-page-btn" onclick="tryOtherApisForDetail(${id})" style="margin-left: 10px;">
+                尝试其他数据源
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    // 尝试其他API获取详情
+    async function tryOtherApisForDetail(id) {
+      const enabledApis = apiConfigs.filter(api => api.enabled);
+      
+      for (let i = 0; i < enabledApis.length; i++) {
+        if (i === currentApiIndex && currentApiIndex !== -1) continue;
+        
+        try {
+          console.log(`尝试数据源 ${enabledApis[i].name} 获取详情...`);
+          await showDetail(id, i);
+          showToast(`已切换到 ${enabledApis[i].name} 数据源`);
+          return;
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      showToast('所有数据源都无法获取详情');
+    }
+    
+    // ==================== 辅助函数 ====================
+    
+    function parseEpisodeUrls(vodPlayUrl) {
+      if (!vodPlayUrl) return [];
+      const episodes = [];
+      const segments = vodPlayUrl.split('#').filter(s => s.trim());
+      
+      segments.forEach(segment => {
+        const parts = segment.split('$');
+        if (parts.length >= 2) {
+          const url = parts[1].trim();
+          if (url) episodes.push(url);
+        }
+      });
+      
+      return episodes;
+    }
+    
+    function renderList(list) {
+      const container = document.getElementById('videoList');
+      list.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <img src="${item.vod_pic || 'https://via.placeholder.com/300x200?text=无封面'}" 
+               onerror="this.src='https://via.placeholder.com/300x200?text=图片加载失败'">
+          <div class="item-title">${escapeHtml(item.vod_name)}</div>
+        `;
+        div.addEventListener('click', () => showDetail(item.vod_id));
+        container.appendChild(div);
+      });
+    }
+    
+    function renderEpisodes() {
+      const container = document.getElementById('playGridContainer');
+      if (currentEpisodeUrls.length === 0) {
+        container.innerHTML = '<div class="error-state">暂无播放资源</div>';
+        return;
+      }
+      
+      let html = '<div class="play-grid">';
+      currentEpisodeUrls.forEach((url, index) => {
+        html += `<button class="episode-btn ${index === 0 ? 'active' : ''}" onclick="playEpisode(${index})">第${index+1}集</button>`;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+    
+    function searchVideos() {
+      const keyword = document.getElementById('searchInput').value.trim();
+      if (!keyword) {
+        showToast('请输入搜索关键词');
+        return;
+      }
+      
+      addToSearchHistory(keyword);
+      isSearching = true;
+      currentKeyword = keyword;
+      currentPage = 1;
+      document.getElementById('videoList').innerHTML = '';
+      document.getElementById('emptyState').style.display = 'none';
+      loadData();
+    }
+    
+    // ==================== 播放功能 ====================
+    
+    function playEpisode(index) {
+      if (index < 0 || index >= currentEpisodeUrls.length) return;
+      
+      currentEpisodeIndex = index;
+      currentPlayUrl = currentEpisodeUrls[index];
+      playedEpisodes.add(index);
+      
+      document.getElementById('currentEpisodeNum').textContent = index + 1;
+      document.getElementById('currentPlaying').style.display = 'block';
+      document.getElementById('jumpInput').value = index + 1;
+      
+      // 更新按钮状态
+      document.querySelectorAll('.episode-btn').forEach((btn, idx) => {
+        btn.classList.remove('active');
+        if (idx === index) btn.classList.add('active');
+      });
+      
+      playVideo(currentPlayUrl);
+    }
+    
+    function playVideo(url) {
+      videoLoadRetryCount = 0;
+      openPlayPage(url);
+    }
+    
+    function openPlayPage(playUrl) {
+      const playOverlay = document.getElementById('playOverlay');
+      const playIframe = document.getElementById('playIframe');
+      const closeBtn = document.getElementById('closePlayBtn');
+      const playLoading = document.getElementById('playLoading');
+      const playError = document.getElementById('playError');
+      const body = document.body;
+      
+      playError.style.display = 'none';
+      
+      let fullUrl = processPlayUrl(playUrl.trim());
+      
+      playLoading.style.display = 'block';
+      playOverlay.style.display = 'block';
+      closeBtn.style.display = 'block';
+      body.classList.add('play-active');
+      
+      setTimeout(() => {
+        playIframe.src = fullUrl;
+        
+        playIframe.onload = function() {
+          playLoading.style.display = 'none';
+          showToast('视频加载成功');
+        };
+        
+        playIframe.onerror = function() {
+          playLoading.style.display = 'none';
+          
+          if (videoLoadRetryCount < MAX_RETRY_COUNT) {
+            videoLoadRetryCount++;
+            const alternativeUrl = getAlternativePlayerUrl(playUrl);
+            if (alternativeUrl) {
+              playIframe.src = alternativeUrl;
+              showToast(`尝试备用播放器 (${videoLoadRetryCount}/${MAX_RETRY_COUNT})`);
+              return;
+            }
+          }
+          
+          showPlayError('播放失败，请尝试其他集数或线路');
+        };
+      }, 300);
+    }
+    
+    function processPlayUrl(url) {
+      if (url.includes('.m3u8')) {
+        return `https://svip.ffzyplay.com/?url=${encodeURIComponent(url)}`;
+      }
+      
+      if (!url.startsWith('http')) {
+        url = `https://${url}`;
+      }
+      
+      return url.replace(/^https?:\/\/https?:\/\//, 'https://');
+    }
+    
+    function getAlternativePlayerUrl(originalUrl) {
+      const players = [
+        `https://svip.ffzyplay.com/?url=${encodeURIComponent(originalUrl)}`,
+        `https://lziplayer.com/?url=${encodeURIComponent(originalUrl)}`
+      ];
+      
+      return players[videoLoadRetryCount % players.length];
+    }
+    
+    function closePlayPage() {
+      const playOverlay = document.getElementById('playOverlay');
+      const playIframe = document.getElementById('playIframe');
+      const closeBtn = document.getElementById('closePlayBtn');
+      const playLoading = document.getElementById('playLoading');
+      const playError = document.getElementById('playError');
+      const body = document.body;
+      
+      playIframe.src = '';
+      playOverlay.style.display = 'none';
+      closeBtn.style.display = 'none';
+      playLoading.style.display = 'none';
+      playError.style.display = 'none';
+      body.classList.remove('play-active');
+    }
+    
+    function playPreviousEpisode() {
+      if (currentEpisodeIndex > 0) {
+        playEpisode(currentEpisodeIndex - 1);
+      } else {
+        showToast('已经是第一集了');
+      }
+    }
+    
+    function playNextEpisode() {
+      if (currentEpisodeIndex < totalEpisodes - 1) {
+        playEpisode(currentEpisodeIndex + 1);
+      } else {
+        showToast('已经是最后一集了');
+      }
+    }
+    
+    function jumpToEpisode() {
+      const jumpNum = parseInt(document.getElementById('jumpInput').value);
+      if (jumpNum && jumpNum >= 1 && jumpNum <= totalEpisodes) {
+        playEpisode(jumpNum - 1);
+      } else {
+        showToast(`请输入1-${totalEpisodes}之间的数字`);
+      }
+    }
+    
+    // ==================== 收藏功能 ====================
+    
+    function loadFavorites() {
+      try {
+        const saved = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        favorites = saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        favorites = [];
+      }
+    }
+    
+    function saveFavorites() {
+      try {
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+      } catch (e) {}
+    }
+    
+    function isFavorite(id) {
+      return favorites.some(item => item.vod_id === id);
+    }
+    
+    function toggleFavorite() {
+      if (!currentVideoItem) return;
+      
+      const id = currentVideoItem.vod_id;
+      const isFavorited = isFavorite(id);
+      
+      if (isFavorited) {
+        favorites = favorites.filter(item => item.vod_id !== id);
+        showToast('已取消收藏');
+      } else {
+        favorites.unshift({
+          vod_id: currentVideoItem.vod_id,
+          vod_name: currentVideoItem.vod_name,
+          vod_pic: currentVideoItem.vod_pic,
+          vod_time: currentVideoItem.vod_time,
+          apiIndex: currentVideoItem.apiIndex,
+          add_time: new Date().toISOString()
+        });
+        showToast('已添加到收藏');
+      }
+      
+      saveFavorites();
+      updateFavoriteButton();
+    }
+    
+    function updateFavoriteButton() {
+      if (!currentVideoItem) return;
+      
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      const favoriteIcon = document.getElementById('favoriteIcon');
+      const favoriteText = document.getElementById('favoriteText');
+      
+      const isFavorited = isFavorite(currentVideoItem.vod_id);
+      
+      if (isFavorited) {
+        favoriteBtn.classList.add('favorited');
+        favoriteIcon.setAttribute('d', 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+        favoriteText.textContent = '已收藏';
+      } else {
+        favoriteBtn.classList.remove('favorited');
+        favoriteIcon.setAttribute('d', 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z');
+        favoriteText.textContent = '收藏';
+      }
+    }
+    
+    function showFavorites() {
+      closePlayPage();
+      document.getElementById('listContainer').style.display = 'none';
+      document.getElementById('detailContainer').style.display = 'none';
+      document.getElementById('favoritesContainer').style.display = 'block';
+      renderFavorites();
+    }
+    
+    function renderFavorites() {
+      const favoritesList = document.getElementById('favoritesList');
+      const emptyFavorites = document.getElementById('emptyFavorites');
+      
+      if (favorites.length === 0) {
+        favoritesList.innerHTML = '';
+        emptyFavorites.style.display = 'block';
+        return;
+      }
+      
+      emptyFavorites.style.display = 'none';
+      
+      let html = '';
+      favorites.forEach((item, index) => {
+        const apiName = apiConfigs[item.apiIndex || 0].name;
+        html += `
+          <div class="favorite-item" onclick="showDetail(${item.vod_id}, ${item.apiIndex || 0})">
+            <img src="${item.vod_pic}" onerror="this.src='https://via.placeholder.com/300x200?text=图片加载失败'">
+            <div class="favorite-item-title">${escapeHtml(item.vod_name)}</div>
+            <div class="favorite-item-actions">
+              <div class="favorite-item-meta">
+                <span style="font-size: 12px; color: #666;">${formatDate(item.add_time)}</span>
+                <span class="favorite-api">${apiName}</span>
+              </div>
+              <button class="remove-favorite" onclick="removeFavorite('${item.vod_id}', event)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      favoritesList.innerHTML = html;
+    }
+    
+    function removeFavorite(id, event) {
+      if (event) event.stopPropagation();
+      if (confirm('确定从收藏中移除吗？')) {
+        favorites = favorites.filter(item => item.vod_id !== id);
+        saveFavorites();
+        renderFavorites();
+        if (currentVideoItem && currentVideoItem.vod_id === id) {
+          updateFavoriteButton();
+        }
+        showToast('已移除收藏');
+      }
+    }
+    
+    function clearAllFavorites() {
+      if (favorites.length === 0) {
+        alert('收藏列表已经是空的');
+        return;
+      }
+      
+      if (confirm('确定清空所有收藏吗？此操作不可撤销。')) {
+        favorites = [];
+        saveFavorites();
+        renderFavorites();
+        if (currentVideoItem) updateFavoriteButton();
+        showToast('已清空收藏列表');
+      }
+    }
+    
+    // ==================== API切换功能 ====================
+    
+    function switchApi(index, shouldReload = true) {
+      if (index < -1 || index >= apiConfigs.length) return;
+      
+      currentApiIndex = index;
+      const apiName = index === -1 ? '智能选择' : apiConfigs[index].name;
+      document.getElementById('currentApiName').textContent = apiName;
+      
+      // 更新选择器状态
+      document.querySelectorAll('.api-option').forEach(opt => {
+        opt.classList.remove('active');
+        if (parseInt(opt.getAttribute('data-api')) === index) {
+          opt.classList.add('active');
+        }
+      });
+      
+      saveCurrentApi();
+      
+      if (shouldReload && isSearching && currentKeyword) {
+        currentPage = 1;
+        document.getElementById('videoList').innerHTML = '';
+        loadData();
+      }
+    }
+    
+    function setupApiSelector() {
+      const apiBtn = document.getElementById('apiBtn');
+      const apiList = document.getElementById('apiList');
+      
+      apiBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        apiList.classList.toggle('show');
+      });
+      
+      document.querySelectorAll('.api-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const index = parseInt(this.getAttribute('data-api'));
+          switchApi(index, true);
+          apiList.classList.remove('show');
+        });
+      });
+      
+      document.addEventListener('click', () => apiList.classList.remove('show'));
+    }
+    
+    function loadCurrentApi() {
+      try {
+        const savedIndex = localStorage.getItem(API_STORAGE_KEY);
+        if (savedIndex !== null) {
+          const index = parseInt(savedIndex);
+          if (index >= -1 && index < apiConfigs.length) {
+            currentApiIndex = index;
+          }
+        }
+        const apiName = currentApiIndex === -1 ? '智能选择' : apiConfigs[currentApiIndex].name;
+        document.getElementById('currentApiName').textContent = apiName;
+      } catch (e) {}
+    }
+    
+    function saveCurrentApi() {
+      try {
+        localStorage.setItem(API_STORAGE_KEY, currentApiIndex.toString());
+      } catch (e) {}
+    }
+    
+    // ==================== 搜索历史功能 ====================
+    
+    function loadSearchHistory() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        searchHistory = saved ? JSON.parse(saved) : [];
+        if (!Array.isArray(searchHistory)) searchHistory = [];
+      } catch (e) {
+        searchHistory = [];
+      }
+      searchHistory = [...new Set(searchHistory)];
+      renderSearchHistory();
+    }
+    
+    function saveSearchHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set(searchHistory)]));
+      } catch (e) {}
+    }
+    
+    function renderSearchHistory() {
+      const historyList = document.getElementById('historyList');
+      if (!searchHistory.length) {
+        historyList.innerHTML = '<div class="no-history">暂无搜索历史</div>';
+        return;
+      }
+      
+      let html = '';
+      searchHistory.slice(0, 10).forEach(keyword => {
+        const safeKeyword = escapeHtml(keyword);
+        html += `
+          <div class="history-item">
+            <span>${safeKeyword}</span>
+            <span class="delete-btn" onclick="deleteHistoryItem('${encodeURIComponent(keyword)}')">×</span>
+          </div>
+        `;
+      });
+      
+      historyList.innerHTML = html;
+      
+      historyList.querySelectorAll('.history-item').forEach((item, index) => {
+        item.addEventListener('click', e => {
+          if (!e.target.classList.contains('delete-btn')) {
+            document.getElementById('searchInput').value = searchHistory[index];
+            searchVideos();
+          }
+        });
+      });
+    }
+    
+    function addToSearchHistory(keyword) {
+      const cleanKeyword = keyword.trim();
+      if (!cleanKeyword) return;
+      
+      const index = searchHistory.indexOf(cleanKeyword);
+      if (index !== -1) searchHistory.splice(index, 1);
+      
+      searchHistory.unshift(cleanKeyword);
+      if (searchHistory.length > 10) searchHistory = searchHistory.slice(0, 10);
+      
+      saveSearchHistory();
+      renderSearchHistory();
+    }
+    
+    function deleteHistoryItem(encodedKeyword) {
+      event.stopPropagation();
+      const keyword = decodeURIComponent(encodedKeyword);
+      const index = searchHistory.indexOf(keyword);
+      if (index !== -1) {
+        searchHistory.splice(index, 1);
+        saveSearchHistory();
+        renderSearchHistory();
+      }
+    }
+    
+    function clearAllHistory() {
+      if (confirm('确定清空所有搜索历史？')) {
+        searchHistory = [];
+        localStorage.removeItem(STORAGE_KEY);
+        renderSearchHistory();
+        showToast('已清空搜索历史');
+      }
+    }
+    
+    // ==================== 工具函数 ====================
+    
+    function showList() {
+      closePlayPage();
+      document.getElementById('detailContainer').style.display = 'none';
+      document.getElementById('favoritesContainer').style.display = 'none';
+      document.getElementById('listContainer').style.display = 'block';
+    }
+    
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = now - date;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return '今天';
+      if (diffDays === 1) return '昨天';
+      if (diffDays < 7) return `${diffDays}天前`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
+      
+      return date.toLocaleDateString('zh-CN');
+    }
+    
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        z-index: 9999;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        max-width: 90%;
+        text-align: center;
+        animation: fadeInOut 3s ease-in-out;
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.5s ease-in-out';
+        setTimeout(() => document.body.removeChild(toast), 500);
+      }, 2500);
+    }
+    
+    function showPlayError(message) {
+      const playError = document.getElementById('playError');
+      const playErrorMessage = document.getElementById('playErrorMessage');
+      playErrorMessage.textContent = message;
+      playError.style.display = 'block';
+    }
+    
+    function retryCurrentEpisode() {
+      document.getElementById('playError').style.display = 'none';
+      videoLoadRetryCount++;
+      
+      if (videoLoadRetryCount < MAX_RETRY_COUNT) {
+        showToast(`正在重试... (${videoLoadRetryCount}/${MAX_RETRY_COUNT})`);
+        playEpisode(currentEpisodeIndex);
+      } else {
+        showPlayError('多次重试失败，请尝试其他集数或线路');
+      }
+    }
+    
+    // ==================== 初始化 ====================
+    
+    window.onload = function() {
+      loadCurrentApi();
+      loadSearchHistory();
+      loadFavorites();
+      setupApiSelector();
+      
+      // 添加CSS动画
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // 搜索框回车事件
+      document.getElementById('searchInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') searchVideos();
+      });
+      
+      // 滚动加载
+      window.addEventListener('scroll', handleScroll);
+    };
+    
+    function handleScroll() {
+      if (!isSearching || isLoading) return;
+      const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        loadData();
+      }
+    }
+  </script>
+</body>
+</html>
